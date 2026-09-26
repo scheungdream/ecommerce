@@ -1,7 +1,7 @@
 # ecommerce
 Java Spring Boot E-Commerce Application
 
-========================================================================================
+============
 
 Storefront (Customer Area)
 
@@ -15,7 +15,7 @@ Checkout Page: Streamlined order processing and billing interface.
 
 Order Page: Clear summary and confirmation for completed orders.
 
-========================================================================================
+============
 
 Admin Dashboard (Management Area)
 
@@ -29,7 +29,7 @@ Order Management: System to view, process, and update customer order statuses.
 
 File Management: System to upload and manage images.
 
-========================================================================================
+============
 
 Tech Stack
 
