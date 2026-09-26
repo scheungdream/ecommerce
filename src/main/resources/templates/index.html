@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>E-Commerce</title>
+    <link href="/css/bootstrap.css" rel="stylesheet">
+    <link href="/css/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+    </style>
+</head>
+<body>
+<div class="toast-container"></div>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+    <div class="container">
+        <a class="navbar-brand" href="/">
+            <i class="bi bi-shop"></i> E-Commerce
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link active" href="/products">
+                        <i class="bi bi-grid"></i> Products
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/cart">
+                        <i class="bi bi-cart"></i> Cart
+                        <span class="badge bg-danger cart-count" id="cartCount">0</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/orders">
+                        <i class="bi bi-box"></i> Orders
+                    </a>
+                </li>
+            </ul>
+            <ul class="navbar-nav">
+                <li class="nav-item" id="userInfo">
+                        <span class="nav-link" id="userDisplay">
+                            <i class="bi bi-person"></i> <span id="usernameDisplay">Guest</span>
+                        </span>
+                </li>
+                <li class="nav-item" id="authButtons">
+                    <a class="nav-link" href="/login">
+                        <i class="bi bi-box-arrow-in-right"></i> Login
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="registerButton" href="/register">
+                        <i class="bi bi-person-plus"></i> Register
+                    </a>
+                </li>
+                <li class="nav-item" id="logoutButton" style="display:none;">
+                    <a class="nav-link" href="javascript:" onclick="logout()">
+                        <i class="bi bi-box-arrow-right"></i> Logout
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container mt-5">
+    <div class="jumbotron text-center">
+        <a class="btn btn-primary btn-lg" href="/products" role="button">Shopping</a>
+        <a class="btn btn-success btn-lg" href="/register" role="button">Register Account</a>
+    </div>
+
+    <h2 class="mt-5">Featured Products</h2>
+    <div class="row" id="productList">
+    </div>
+</div>
+
+<script>
+    fetch('/api/products')
+        .then(res => res.json())
+        .then(products => {
+            const container = document.getElementById('productList');
+            products.content.forEach(product => {
+                const isOutOfStock = product.stock <= 0;
+
+                container.innerHTML += `
+                    <div class="col-md-3 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body d-flex flex-column justify-content-between">
+                                <div>
+                                    <h5 class="card-title">${product.name}</h5>
+                                    <p class="card-text fw-bold text-primary">$${product.price}</p>
+                                    <p class="${isOutOfStock ? 'text-danger fw-bold' : 'text-muted'}">
+                                        ${isOutOfStock ? 'Out of Stock' : 'Stock: ' + product.stock}
+                                    </p>
+                                </div>
+                                <button class="btn ${isOutOfStock ? 'btn-secondary' : 'btn-primary'} btn-sm w-100 mt-2"
+                                        onclick="addToCart(${product.id})"
+                                        ${isOutOfStock ? 'disabled' : ''}>
+                                    ${isOutOfStock ? 'Sold Out' : 'Add to Cart'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        });
+
+    async function addToCart(productId) {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/login';
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/cart/add?productId=${productId}&quantity=1`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (res.ok) {
+                showToast('Added to cart!', 'success');
+                await updateCartCount();
+                return;
+            }
+
+            const contentType = res.headers.get("content-type");
+            let errorMsg = 'Failed to add item';
+
+            if (contentType && contentType.includes("application/json")) {
+                const data = await res.json();
+                errorMsg = data.message || errorMsg;
+            } else {
+                const text = await res.text();
+                if (text) errorMsg = text;
+            }
+
+            if (res.status === 401) {
+                showToast('Session expired, please login again', 'error');
+                localStorage.removeItem('token');
+                setTimeout(() => { window.location.href = '/login'; }, 1500);
+            } else {
+                showToast(errorMsg, 'error');
+            }
+
+        } catch (err) {
+            console.error("Cart Add Error:", err);
+            showToast('Network error, please try again', 'error');
+        }
+    }
+
+    async function updateCartCount() {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            document.getElementById('cartCount').textContent = '0';
+            return;
+        }
+
+        await fetch('/api/cart', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
+            .then(res => {
+                if (!res.ok) {
+                    showToast('Failed to load cart', 'error');
+                }
+                return res.json();
+            })
+            .then(cart => {
+                document.getElementById('cartCount').textContent = cart.reduce((sum, item) => sum + item.quantity, 0);
+            })
+            .catch(() => {
+                document.getElementById('cartCount').textContent = '0';
+            });
+    }
+
+    async function checkAuth() {
+        const token = localStorage.getItem('token');
+        await clearExpiredToken(token);
+        if (token) {
+            document.getElementById('authButtons').style.display = 'none';
+            document.getElementById('registerButton').style.display = 'none';
+            document.getElementById('logoutButton').style.display = 'block';
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                document.getElementById('usernameDisplay').textContent = payload.sub || 'User';
+            } catch (e) {
+                document.getElementById('usernameDisplay').textContent = 'User';
+            }
+        } else {
+            document.getElementById('authButtons').style.display = 'block';
+            document.getElementById('registerButton').style.display = 'block';
+            document.getElementById('logoutButton').style.display = 'none';
+            document.getElementById('usernameDisplay').textContent = 'Guest';
+        }
+        await updateCartCount();
+    }
+
+    function logout() {
+        localStorage.removeItem('token');
+        checkAuth();
+        showToast('Logged out successfully', 'info');
+        window.location.href = '/';
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        checkAuth();
+    });
+</script>
+<script src="/js/bootstrap.bundle.js"></script>
+<script src="/js/global.js"></script>
+</body>
+</html>

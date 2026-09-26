@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Commerce - Checkout</title>
+    <link href="/css/bootstrap.css" rel="stylesheet">
+    <link href="/css/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f5f7fa;
+        }
+        .checkout-container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .checkout-header {
+            background: white;
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .checkout-section {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .checkout-section .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #f1f3f5;
+        }
+        .checkout-section .section-title i {
+            color: #0d6efd;
+            margin-right: 8px;
+        }
+
+        .order-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f1f3f5;
+        }
+        .order-item:last-child {
+            border-bottom: none;
+        }
+        .order-item-image {
+            width: 64px;
+            height: 64px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-right: 16px;
+            background: #f8f9fa;
+        }
+        .order-item-info {
+            flex: 1;
+        }
+        .order-item-name {
+            font-weight: 500;
+            color: #2c3e50;
+        }
+        .order-item-price {
+            color: #e74c3c;
+            font-weight: 600;
+        }
+        .order-item-quantity {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .form-control{
+            border-radius: 8px;
+            padding: 10px 14px;
+            border: 1px solid #e9ecef;
+            transition: all 0.3s;
+        }
+        .form-control:focus{
+            border-color: #0d6efd;
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+        }
+        .form-label {
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        .payment-method {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 10px;
+        }
+        .payment-method:hover {
+            border-color: #0d6efd;
+            background: #f8faff;
+        }
+        .payment-method.active {
+            border-color: #0d6efd;
+            background: #f0f7ff;
+        }
+        .payment-method input[type="radio"] {
+            margin-right: 12px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        .payment-method .method-icon {
+            font-size: 1.5rem;
+            margin-right: 12px;
+            width: 36px;
+            text-align: center;
+        }
+        .payment-method .method-name {
+            font-weight: 500;
+            flex: 1;
+        }
+        .payment-method .method-desc {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 0.95rem;
+        }
+        .summary-row.total {
+            border-top: 2px solid #e9ecef;
+            padding-top: 16px;
+            margin-top: 8px;
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+        .summary-row.total .amount {
+            color: #e74c3c;
+            font-size: 1.6rem;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 14px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #0d6efd, #6f42c1);
+            border: none;
+            transition: all 0.3s;
+        }
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 28px rgba(13, 110, 253, 0.35);
+        }
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.85);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        .loading-overlay.show {
+            display: flex;
+        }
+        .loading-overlay .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+
+        @media (max-width: 768px) {
+            .checkout-section {
+                padding: 16px;
+            }
+            .order-item {
+                flex-wrap: wrap;
+            }
+            .order-item-image {
+                width: 50px;
+                height: 50px;
+            }
+            .summary-row.total .amount {
+                font-size: 1.3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p class="mt-3 text-muted">Submitting order...</p>
+</div>
+
+<div class="toast-container"></div>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+    <div class="container">
+        <a class="navbar-brand" href="/">
+            <i class="bi bi-shop"></i> E-Commerce
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="/">
+                        <i class="bi bi-house"></i> Home
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/products">
+                        <i class="bi bi-grid"></i> Products
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/cart">
+                        <i class="bi bi-cart"></i> Cart
+                        <span class="badge bg-danger cart-count" id="cartCount">0</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/orders">
+                        <i class="bi bi-box"></i> Orders
+                    </a>
+                </li>
+            </ul>
+            <ul class="navbar-nav">
+                <li class="nav-item" id="userInfo">
+                    <span class="nav-link" id="userDisplay">
+                        <i class="bi bi-person"></i> <span id="usernameDisplay">Guest</span>
+                    </span>
+                </li>
+                <li class="nav-item" id="logoutButton" style="display:none;">
+                    <a class="nav-link" href="javascript:" onclick="logout()">
+                        <i class="bi bi-box-arrow-right"></i> Logout
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container checkout-container mt-4">
+    <div class="checkout-header">
+        <h4 class="mb-0"><i class="bi bi-clipboard-check"></i> Checkout</h4>
+        <p class="text-muted mb-0 small">Please review item details and enter shipping information</p>
+    </div>
+
+    <div class="checkout-section" id="orderItemsSection">
+        <div class="section-title">
+            <i class="bi bi-bag"></i> Item List
+        </div>
+        <div id="orderItemsList">
+        </div>
+    </div>
+
+    <div class="checkout-section">
+        <div class="section-title">
+            <i class="bi bi-receipt"></i> Order Summary
+        </div>
+        <div class="summary-row">
+            <span>Subtotal</span>
+            <span id="subtotalAmount">$0.00</span>
+        </div>
+        <div class="summary-row">
+            <span>Shipping Fee</span>
+            <span id="shippingFee">$0.00</span>
+        </div>
+        <div class="summary-row">
+            <span>Discount</span>
+            <span id="discount">-$0.00</span>
+        </div>
+        <div class="summary-row total">
+            <span>Total Amount</span>
+            <span class="amount" id="totalAmount">$0.00</span>
+        </div>
+    </div>
+
+    <div class="checkout-section">
+        <div class="section-title">
+            <i class="bi bi-geo-alt"></i> Shipping Details
+        </div>
+        <form id="checkoutForm">
+            <div class="row g-3">
+                <div class="col-12">
+                    <label for="shipping-address" class="form-label">Shipping Address <span class="text-danger">*</span></label>
+                    <div id="shipping-address"></div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div class="checkout-section">
+        <div class="section-title">
+            <i class="bi bi-credit-card"></i> Payment Method
+        </div>
+        <div id="paymentMethods">
+            <label class="payment-method active">
+                <input type="radio" name="paymentMethod" value="CREDIT_CARD" checked>
+                <span class="method-icon"><i class="bi bi-credit-card"></i></span>
+                <span class="method-name">Credit Card</span>
+                <span class="method-desc">Visa / MasterCard</span>
+            </label>
+        </div>
+        <div id="payment-element"></div>
+        <button class="btn btn-primary btn-submit mt-3" id="submitOrderBtn">
+            <i class="bi bi-check-circle"></i> Pay Now
+        </button>
+    </div>
+</div>
+
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+    let checkoutItems = [];
+    const token = localStorage.getItem('token');
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function formatPrice(price) {
+        return '$' + parseFloat(price).toFixed(2);
+    }
+
+    function parseJwt(token) {
+        try {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            return JSON.parse(jsonPayload);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    async function checkAuth() {
+        const token = getToken();
+        await clearExpiredToken(token);
+        if (token) {
+            const payload = parseJwt(token);
+            if (!payload) {
+                logout();
+                return;
+            }
+            if (document.getElementById('authButtons')) {
+                document.getElementById('authButtons').style.display = 'none';
+            }
+            document.getElementById('logoutButton').style.display = 'block';
+            document.getElementById('usernameDisplay').textContent = payload.sub || 'User';
+        } else {
+            if (document.getElementById('authButtons')) {
+                document.getElementById('authButtons').style.display = 'block';
+            }
+            document.getElementById('logoutButton').style.display = 'none';
+            document.getElementById('usernameDisplay').textContent = 'Guest';
+            window.location.href = '/login';
+        }
+        await updateCartCount();
+    }
+
+    function logout() {
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+    }
+
+    async function updateCartCount() {
+        const token = getToken();
+        if (!token) {
+            document.getElementById('cartCount').textContent = '0';
+            return;
+        }
+        await fetch('/api/cart/count', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('cartCount').textContent = data.count || 0;
+            })
+            .catch(() => {
+                document.getElementById('cartCount').textContent = '0';
+            });
+    }
+
+    async function loadCheckoutData() {
+        const token = getToken();
+        if (!token) {
+            window.location.href = '/login';
+            return;
+        }
+
+        const storedItems = sessionStorage.getItem('checkoutItems');
+
+        if (storedItems) {
+            checkoutItems = JSON.parse(storedItems);
+        } else {
+            await loadCartItems();
+            return;
+        }
+
+        renderOrderItems();
+        updateSummary();
+    }
+
+    async function loadCartItems() {
+        const token = getToken();
+        await fetch('/api/cart', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
+            .then(res => {
+                if (!res.ok) throw new Error('Failed to load');
+                return res.json();
+            })
+            .then(cartItems => {
+                checkoutItems = cartItems.filter(item => item.selected !== false);
+                if (checkoutItems.length === 0) {
+                    showToast('Please select at least one item', 'warning');
+                    setTimeout(() => {
+                        window.location.href = '/cart';
+                    }, 1500);
+                    return;
+                }
+                renderOrderItems();
+                updateSummary();
+            })
+            .catch(err => {
+                showToast('Failed to load checkout data', 'error');
+                console.error(err);
+            });
+    }
+
+    function renderOrderItems() {
+        const container = document.getElementById('orderItemsList');
+
+        if (checkoutItems.length === 0) {
+            container.innerHTML = `
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-cart-x display-4"></i>
+                        <p class="mt-2">No items selected</p>
+                        <a href="/cart" class="btn btn-primary btn-sm">Return to Cart</a>
+                    </div>
+                `;
+            document.getElementById('submitOrderBtn').disabled = true;
+            return;
+        }
+
+        document.getElementById('submitOrderBtn').disabled = false;
+
+        container.innerHTML = checkoutItems.map(item => {
+            const product = item.product || {};
+            const price = product.price || 0;
+            const subtotal = price * item.quantity;
+            const stock = product.stock || 0;
+            const isStockInsufficient = stock < item.quantity;
+
+            const safeName = escapeHtml(product.name || 'Unknown Product');
+            const safeImageUrl = escapeHtml(product.imageUrl);
+
+            return `
+                    <div class="order-item">
+                        <img src="${safeImageUrl}"
+                             class="order-item-image"
+                             alt="${safeName}">
+                        <div class="order-item-info">
+                            <div class="order-item-name">${safeName}</div>
+                            <div class="order-item-price">${formatPrice(price)}</div>
+                        </div>
+                        <div class="text-end">
+                            <div class="order-item-quantity">× ${item.quantity}</div>
+                            <div class="order-item-price">${formatPrice(subtotal)}</div>
+                            ${isStockInsufficient ? `
+                                <div class="text-danger small">
+                                    <i class="bi bi-exclamation-triangle"></i> Insufficient stock
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+        }).join('');
+
+        const hasInsufficient = checkoutItems.some(item => {
+            const stock = item.product?.stock || 0;
+            return stock < item.quantity;
+        });
+
+        if (hasInsufficient) {
+            showToast('Some items have insufficient stock. Please return to cart to adjust.', 'error');
+            document.getElementById('submitOrderBtn').disabled = true;
+        }
+    }
+
+    function updateSummary() {
+        const total = checkoutItems.reduce((sum, item) => {
+            return sum + (item.product?.price || 0) * item.quantity;
+        }, 0);
+
+        const shippingFee = 0;
+        const discount = 0;
+        const finalTotal = total + shippingFee - discount;
+
+        document.getElementById('subtotalAmount').textContent = formatPrice(total);
+        document.getElementById('shippingFee').textContent = shippingFee === 0 ? 'Free Shipping' : formatPrice(shippingFee);
+        document.getElementById('discount').textContent = discount > 0 ? '-' + formatPrice(discount) : '$0.00';
+        document.getElementById('totalAmount').textContent = formatPrice(finalTotal);
+    }
+
+    document.querySelectorAll('.payment-method').forEach(el => {
+        el.addEventListener('click', function() {
+            document.querySelectorAll('.payment-method').forEach(m => m.classList.remove('active'));
+            this.classList.add('active');
+            this.querySelector('input[type="radio"]').checked = true;
+        });
+    });
+
+    async function initializePaymentMethod() {
+        try {
+            const apikey = await fetch('/api/payment/get-publishable-key', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!apikey.ok) {
+                showToast('Failed to load Stripe configuration', 'error');
+                const submitBtn = document.getElementById('submitOrderBtn');
+                if (submitBtn) submitBtn.disabled = true;
+            }
+            const { publishableKey } = await apikey.json();
+
+            const stripe = Stripe(publishableKey);
+
+            const intentRes = await fetch('/api/payment/create-payment-intent', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const intentData = await intentRes.json();
+
+            if (!intentRes.ok) {
+                const errorMsg = intentData.message || 'Product stock is insufficient.';
+                showToast(errorMsg, 'error');
+
+                const submitBtn = document.getElementById('submitOrderBtn');
+                if (submitBtn) submitBtn.disabled = true;
+                return;
+            }
+
+            const clientSecret = intentData.client_secret;
+
+            const elements = stripe.elements({ clientSecret });
+
+            const shippingAddressElement = elements.create('address', {
+                mode: 'shipping',
+                fields: { phone: 'always' }
+            });
+            shippingAddressElement.mount('#shipping-address');
+
+            const paymentElement = elements.create('payment', {
+                layout: 'tabs'
+            });
+            paymentElement.mount('#payment-element');
+
+            const submitBtn = document.getElementById('submitOrderBtn');
+            submitBtn.onclick = async () => {
+                submitBtn.disabled = true;
+                document.getElementById('loadingOverlay').classList.add('show');
+
+                const { error } = await stripe.confirmPayment({
+                    elements,
+                    confirmParams: {
+                        return_url: `${window.location.origin}/verify-payment`
+                    }
+                });
+
+                if (error) {
+                    showToast(error.message, 'error');
+                    submitBtn.disabled = false;
+                    document.getElementById('loadingOverlay').classList.remove('show');
+                }
+            };
+
+        } catch (err) {
+            console.error('Failed to initialize payment method:', err);
+            showToast(err.message || 'Failed to load payment system', 'error');
+            const submitBtn = document.getElementById('submitOrderBtn');
+            if (submitBtn) submitBtn.disabled = true;
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', async function() {
+        await checkAuth();
+        await updateCartCount();
+        await loadCheckoutData();
+        await initializePaymentMethod();
+    });
+
+    window.logout = logout;
+</script>
+
+<script src="/js/bootstrap.bundle.js"></script>
+<script src="/js/global.js"></script>
+</body>
+</html>

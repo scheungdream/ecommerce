@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Verify Email</title>
+</head>
+<body>
+<div id="result">Verifying...</div>
+
+<script>
+    function getQueryParam(param) {
+        return new URLSearchParams(window.location.search).get(param);
+    }
+
+    async function verify() {
+        const email = getQueryParam('email') || '';
+        const code = getQueryParam('code') || '';
+        const resultDiv = document.getElementById('result');
+
+        try {
+            const res = await fetch('/api/auth/verify-email', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ email, code })
+            });
+
+            const message = await res.text();
+
+            if (res.ok) {
+                resultDiv.innerHTML = `${message}`;
+            } else {
+                resultDiv.innerHTML = `${message}`;
+            }
+        } catch (err) {
+            resultDiv.innerHTML = 'Network request error';
+        }
+    }
+
+    verify();
+</script>
+</body>
+</html>

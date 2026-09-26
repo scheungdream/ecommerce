@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Verify Payment</title>
+</head>
+<body>
+<div id="result">Verifying your payment, please do not close this page...</div>
+
+<script>
+    async function verifyPayment() {
+        const resultDiv = document.getElementById("result");
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const paymentIntentId = urlParams.get('payment_intent');
+
+        if (!paymentIntentId) {
+            resultDiv.innerText = "Invalid payment reference. Payment verification failed.";
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('token');
+
+            if (!token) {
+                console.error("No JWT token found in localStorage!");
+                resultDiv.innerText = "Authentication failed. Please log in again.";
+                return;
+            }
+
+            const response = await fetch('/api/payment/verify-payment', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ paymentIntentId: paymentIntentId })
+            });
+
+            if (!response.ok) {
+                console.error("Verification error:", response.statusText);
+            }
+
+            const data = await response.json();
+
+            if (data.status === "success") {
+                resultDiv.innerText = "Payment successful! Redirecting to orders...";
+
+                sessionStorage.removeItem('stripe_client_secret');
+                sessionStorage.removeItem('checkoutItems');
+
+                setTimeout(() => {
+                    window.location.href = '/orders';
+                }, 1500);
+            } else {
+                resultDiv.innerText = `Error verifying payment. Please contact support.`;
+            }
+
+        } catch (error) {
+            console.error("Verification error:", error);
+            resultDiv.innerText = "Error verifying payment. Please contact support.";
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', verifyPayment);
+</script>
+</body>
+</html>
